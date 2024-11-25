@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Business Marketplace</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://login2explore.com/jpdb/resources/js/0.0.4/jpdb-commons.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center my-4">Local Business Marketplace</h1>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <h3>Product Management</h3>
+                <form id="productForm">
+                    <div class="form-group">
+                        <input type="text" class="form-control" id="id" placeholder="User-Defined Product ID" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control" id="recordNo" placeholder="Record Number (for Update/Delete)" readonly>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control" id="businessName" placeholder="Business Name" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control" id="productName" placeholder="Product Name" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control" id="price" placeholder="Price" required>
+                    </div>
+                    <div class="form-group">
+                        <select class="form-control" id="category" required>
+                            <option value="">Select Category</option>
+                            <option value="Groceries">Groceries</option>
+                            <option value="Electronics">Electronics</option>
+                            <option value="Handmade">Handmade</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <textarea class="form-control" id="description" placeholder="Product Description"></textarea>
+                    </div>
+                    <div class="btn-group w-100">
+                        <button type="button" class="btn btn-primary" onclick="addProduct()">Add Product</button>
+                        <button type="button" class="btn btn-warning" onclick="updateProduct()">Update Product</button>
+                        <button type="button" class="btn btn-danger" onclick="deleteProduct()">Delete Product</button>
+                    </div>
+                </form>
+                <div id="alertContainer" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CONNECTION_TOKEN = "Your-TOKEN-Here";
+        const DB_NAME = "LOCAL_MARKETPLACE";
+        const RELATION_NAME = "PRODUCTS";
+
+        function showAlert(message, type = 'success') {
+            const alertContainer = $("#alertContainer");
+            alertContainer.html(`
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            `);
+        }
+
+        function addProduct() {
+            const jsonObj = {
+                id: $("#id").val(),
+                businessName: $("#businessName").val(),
+                productName: $("#productName").val(),
+                price: $("#price").val(),
+                category: $("#category").val(),
+                description: $("#description").val(),
+                timestamp: new Date().toISOString()
+            };
+
+            const putRequest = createPUTRequest(CONNECTION_TOKEN, JSON.stringify(jsonObj), DB_NAME, RELATION_NAME);
+            
+            $.ajax({
+                method: "POST",
+                url: "http://api.login2explore.com:5577/api/iml",
+                data: putRequest,
+                success: function(response) {
+                    const result = JSON.parse(response);
+                    if (result.status === 200) {
+                        $("#recordNo").val(result.data[$("#id").val()]); // Set record number
+                        showAlert("Product added successfully!");
+                    } else {
+                        showAlert("Failed to add product", "danger");
+                    }
+                },
+                error: function() {
+                    showAlert("Error in adding product", "danger");
+                }
+            });
+        }
+
+        function updateProduct() {
+            const recordNo = $("#recordNo").val();
+            if (!recordNo) {
+                showAlert("Please add product first to get Record Number", "warning");
+                return;
+            }
+
+            const jsonObj = {};
+            jsonObj[recordNo] = {
+                id: $("#id").val(),
+                businessName: $("#businessName").val(),
+                productName: $("#productName").val(),
+                price: $("#price").val(),
+                category: $("#category").val(),
+                description: $("#description").val()
+            };
+
+            const updateRequest = createUPDATERecordRequest(CONNECTION_TOKEN, jsonObj, DB_NAME, RELATION_NAME, recordNo);
+            
+            $.ajax({
+                method: "POST",
+                url: "http://api.login2explore.com:5577/api/iml",
+                data: updateRequest,
+                success: function(response) {
+                    const result = JSON.parse(response);
+                    if (result.status === 200) {
+                        showAlert("Product updated successfully!");
+                    } else {
+                        showAlert("Failed to update product", "danger");
+                    }
+                },
+                error: function() {
+                    showAlert("Error in updating product", "danger");
+                }
+            });
+        }
+
+        function deleteProduct() {
+            const recordNo = $("#recordNo").val();
+            if (!recordNo) {
+                showAlert("Please add product first to get Record Number", "warning");
+                return;
+            }
+
+            const deleteRequest = createREMOVERecordRequest(CONNECTION_TOKEN, DB_NAME, RELATION_NAME, recordNo);
+            
+            $.ajax({
+                method: "POST",
+                url: "http://api.login2explore.com:5577/api/iml",
+                data: deleteRequest,
+                success: function(response) {
+                    const result = JSON.parse(response);
+                    if (result.status === 200) {
+                        showAlert("Product deleted successfully!");
+                        resetForm();
+                    } else {
+                        showAlert("Failed to delete product", "danger");
+                    }
+                },
+                error: function() {
+                    showAlert("Error in deleting product", "danger");
+                }
+            });
+        }
+
+        function resetForm() {
+            $("#productForm")[0].reset();
+        }
+    </script>
+</body>
+</html>
